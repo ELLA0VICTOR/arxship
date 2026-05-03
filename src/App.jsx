@@ -64,16 +64,16 @@ function cellName(cell) {
 
 function Board({ mode, selectedCells = [], shotsMask = 0n, disabledCells = 0n, onCellClick, ownFleetMask = 0n }) {
   return (
-    <div className="border border-white/18 bg-black">
-      <div className="grid grid-cols-[34px_repeat(5,minmax(0,1fr))] border-b border-white/12 text-center text-[10px] uppercase tracking-[0.18em] text-white/45">
+    <div className="w-full overflow-hidden border border-white/18 bg-black">
+      <div className="grid grid-cols-[28px_repeat(5,minmax(0,1fr))] border-b border-white/12 text-center text-[9px] uppercase tracking-[0.16em] text-white/45 sm:grid-cols-[34px_repeat(5,minmax(0,1fr))] sm:text-[10px]">
         <div />
         {Array.from({ length: 5 }).map((_, col) => (
           <div key={col} className="border-l border-white/12 py-2">{col + 1}</div>
         ))}
       </div>
       {Array.from({ length: 5 }).map((_, row) => (
-        <div key={row} className="grid grid-cols-[34px_repeat(5,minmax(0,1fr))] border-b border-white/12 last:border-b-0">
-          <div className="grid place-items-center border-r border-white/12 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+        <div key={row} className="grid grid-cols-[28px_repeat(5,minmax(0,1fr))] border-b border-white/12 last:border-b-0 sm:grid-cols-[34px_repeat(5,minmax(0,1fr))]">
+          <div className="grid place-items-center border-r border-white/12 text-[9px] font-black uppercase tracking-[0.16em] text-white/45 sm:text-[10px]">
             {String.fromCharCode(65 + row)}
           </div>
           {Array.from({ length: 5 }).map((__, col) => {
@@ -93,7 +93,7 @@ function Board({ mode, selectedCells = [], shotsMask = 0n, disabledCells = 0n, o
                       disabled={!interactive}
                       onClick={() => onCellClick?.(cell)}
                       className={[
-                        'relative grid aspect-square min-h-12 place-items-center border-r border-white/12 text-xs font-bold text-white/76 transition last:border-r-0 hover:bg-white/10 disabled:cursor-default',
+                        'relative grid aspect-square min-h-10 place-items-center border-r border-white/12 text-[10px] font-bold text-white/76 transition last:border-r-0 hover:bg-white/10 disabled:cursor-default sm:min-h-12 sm:text-xs',
                         selected ? 'bg-white text-black hover:bg-white' : '',
                         ownShip ? 'bg-white/16 text-white' : '',
                         wasShot ? 'bg-white/26 text-white' : '',
@@ -168,13 +168,13 @@ function GamePanel({ game, walletAddress, onRefresh }) {
   }
 
   return (
-    <article className="border-t border-white/18 py-8 first:border-t-0">
+    <article className="border-t border-white/18 py-6 first:border-t-0 sm:py-8">
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-7">
           <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
+            <div className="min-w-0">
               <div className="mb-3 text-[10px] uppercase tracking-[0.26em] text-white/42">Match / {game.gameId}</div>
-              <h3 className="font-pixel text-xl leading-8 text-white">{game.callsign || 'Unnamed Sector'}</h3>
+              <h3 className="break-words font-pixel text-base leading-7 text-white sm:text-xl sm:leading-8">{game.callsign || 'Unnamed Sector'}</h3>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
                 {shortAddress(game.creator)} {game.opponent ? `versus ${shortAddress(game.opponent)}` : 'awaiting rival captain'}
               </p>
@@ -182,7 +182,7 @@ function GamePanel({ game, walletAddress, onRefresh }) {
             <StatusText game={game} />
           </header>
 
-          <div className="grid border-y border-white/14 md:grid-cols-4">
+          <div className="grid grid-cols-2 border-y border-white/14 md:grid-cols-4">
             <MiniStat label="Role" value={playerIndex ? `Player ${playerIndex}` : 'Spectator'} />
             <MiniStat label="Turn" value={game.currentTurn ? `Player ${game.currentTurn}` : '-'} />
             <MiniStat label="Last Scan" value={game.lastShooter ? `${cellName(game.lastCell)} ${game.lastHit ? 'Hit' : 'Miss'}` : 'None'} />
@@ -296,9 +296,9 @@ function GamePanel({ game, walletAddress, onRefresh }) {
 
 function MiniStat({ label, value, compact = false }) {
   return (
-    <div className={['border-white/14 p-4 md:border-r md:last:border-r-0', compact ? 'border-r last:border-r-0' : ''].join(' ')}>
-      <div className="text-[10px] uppercase tracking-[0.22em] text-white/42">{label}</div>
-      <div className="mt-2 truncate text-base font-black text-white">{value}</div>
+    <div className={['min-w-0 border-white/14 p-3 sm:p-4 md:border-r md:last:border-r-0', compact ? 'border-r last:border-r-0' : ''].join(' ')}>
+      <div className="text-[9px] uppercase tracking-[0.18em] text-white/42 sm:text-[10px] sm:tracking-[0.22em]">{label}</div>
+      <div className="mt-2 truncate text-sm font-black text-white sm:text-base">{value}</div>
     </div>
   )
 }
@@ -316,11 +316,11 @@ function SectionHeader({ eyebrow, title, description }) {
 function ActionPanel({ icon: Icon, title, description, children }) {
   return (
     <div className="border-y border-white/14 py-5">
-      <div className="mb-5 flex gap-4">
+      <div className="mb-5 flex gap-3 sm:gap-4">
         <div className="grid h-10 w-10 shrink-0 place-items-center border border-white/24 bg-white text-black">
           <Icon className="h-5 w-5" />
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="font-black uppercase tracking-[0.16em] text-white">{title}</div>
           <p className="mt-2 text-sm leading-6 text-white/58">{description}</p>
         </div>
@@ -480,21 +480,21 @@ export default function App() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="pointer-events-none fixed inset-0 opacity-[0.06] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:64px_64px]" />
-      <div className="relative mx-auto min-h-screen max-w-[1500px] border-x border-white/12">
+      <div className="relative mx-auto min-h-screen max-w-[1500px] sm:border-x sm:border-white/12">
         <CommandNav walletAddress={walletAddress} counts={counts} />
 
         <header id="intel" className="border-b border-white/18">
           <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_460px]">
-            <section className="px-5 py-10 md:px-8 lg:py-16">
-              <div className="mb-7 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.28em] text-white/44">
+            <section className="px-4 py-8 sm:px-5 sm:py-10 md:px-8 lg:py-16">
+              <div className="mb-6 flex flex-wrap gap-2 text-[9px] uppercase tracking-[0.22em] text-white/44 sm:mb-7 sm:gap-3 sm:text-[10px] sm:tracking-[0.28em]">
                 <span>Arcium encrypted gameplay</span>
                 <span className="hidden text-white/20 sm:inline">/</span>
                 <span>Solana devnet</span>
               </div>
-              <h1 className="max-w-4xl font-pixel text-4xl leading-tight text-white md:text-6xl">
+              <h1 className="max-w-4xl font-pixel text-[1.65rem] leading-[1.45] text-white sm:text-4xl md:text-5xl lg:text-6xl">
                 Private fleet warfare, fully onchain.
               </h1>
-              <p className="mt-7 max-w-3xl text-base leading-8 text-white/64 md:text-lg">
+              <p className="mt-6 max-w-3xl text-sm leading-7 text-white/64 sm:mt-7 sm:text-base sm:leading-8 md:text-lg">
                 ArxShip is a two-player strategy game where fleets stay hidden, shots stay public,
                 and Arcium reveals only the rule-required hit, miss, and winner.
               </p>
@@ -505,7 +505,7 @@ export default function App() {
               </div>
             </section>
 
-            <aside className="border-t border-white/18 p-5 md:p-8 lg:border-l lg:border-t-0">
+            <aside className="border-t border-white/18 p-4 sm:p-5 md:p-8 lg:border-l lg:border-t-0">
               <div className="mb-5 flex items-center justify-between border-b border-white/14 pb-4">
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.26em] text-white/42">Tactical Screen</div>
@@ -528,16 +528,16 @@ export default function App() {
           <FeatureLine title="No Trust UI" text="Solana enforces turns while Arcium resolves private outcomes." />
         </section>
 
-        <section id="matches" className="px-5 py-7 md:px-8">
+        <section id="matches" className="px-4 py-7 sm:px-5 md:px-8">
           <div className="flex flex-col gap-5 border-b border-white/18 pb-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+            <div className="min-w-0">
               <div className="text-[10px] uppercase tracking-[0.3em] text-white/42">Battle Board</div>
-              <h2 className="mt-3 font-pixel text-xl text-white">Live Match Control</h2>
+              <h2 className="mt-3 font-pixel text-base leading-7 text-white sm:text-xl">Live Match Control</h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
                 Create, join, lock fleets, and resolve shots from a single professional command surface.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="grid gap-3 sm:flex sm:flex-wrap">
               {syncing && !loading && (
                 <div className="flex items-center border border-white/14 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/44">
                   Syncing chain
@@ -552,21 +552,23 @@ export default function App() {
 
           {notice && <div className="mt-6 border-l-2 border-white bg-white/8 p-4 text-sm leading-6 text-white">{notice}</div>}
 
-          <nav className="mt-7 flex flex-wrap border-b border-white/18">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={[
-                  'border-b-2 px-0 py-4 pr-8 text-left text-xs font-black uppercase tracking-[0.2em] transition md:pr-12',
-                  activeTab === tab.id ? 'border-white text-white' : 'border-transparent text-white/38 hover:text-white/78',
-                ].join(' ')}
-              >
-                {tab.label} <span className="ml-2 text-white/38">{counts[tab.id] || 0}</span>
-              </button>
-            ))}
-          </nav>
+          <div className="-mx-4 mt-7 overflow-x-auto px-4 sm:-mx-5 sm:px-5 md:mx-0 md:px-0">
+            <nav className="flex min-w-max border-b border-white/18 md:min-w-0 md:flex-wrap">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={[
+                    'shrink-0 border-b-2 px-0 py-4 pr-7 text-left text-[10px] font-black uppercase tracking-[0.18em] transition sm:text-xs sm:tracking-[0.2em] md:pr-12',
+                    activeTab === tab.id ? 'border-white text-white' : 'border-transparent text-white/38 hover:text-white/78',
+                  ].join(' ')}
+                >
+                  {tab.label} <span className="ml-2 text-white/38">{counts[tab.id] || 0}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
 
           <section className="min-h-[360px]">
             {loading && !games.length ? (
@@ -585,7 +587,7 @@ export default function App() {
           </section>
         </section>
 
-        <footer className="border-t border-white/18 px-5 py-7 md:px-8">
+        <footer className="border-t border-white/18 px-4 py-7 sm:px-5 md:px-8">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div>
               <div className="font-pixel text-sm text-white">ArxShip</div>
@@ -609,25 +611,25 @@ function CommandNav({ walletAddress, counts }) {
   const liveCount = (counts.setup || 0) + (counts.active || 0)
 
   return (
-    <nav className="sticky top-0 z-30 border-b border-white/18 bg-black/95 px-5 py-4 backdrop-blur md:px-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <nav className="sticky top-0 z-30 border-b border-white/18 bg-black/95 px-4 py-3 backdrop-blur sm:px-5 md:px-8 md:py-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <a href="#intel" className="group flex items-center gap-4">
           <span className="grid h-10 w-10 place-items-center border border-white bg-white font-black text-black transition group-hover:bg-black group-hover:text-white">
             AX
           </span>
-          <span>
-            <span className="block font-pixel text-sm text-white">ArxShip</span>
+          <span className="min-w-0">
+            <span className="block font-pixel text-xs text-white sm:text-sm">ArxShip</span>
             <span className="mt-1 block text-[10px] uppercase tracking-[0.24em] text-white/40">Private naval tactics</span>
           </span>
         </a>
 
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          <div className="flex flex-wrap gap-6 border-y border-white/12 py-3 lg:border-y-0 lg:py-0">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="-mx-4 flex gap-5 overflow-x-auto border-y border-white/12 px-4 py-3 sm:mx-0 sm:flex-wrap sm:gap-6 sm:px-0 lg:border-y-0 lg:py-0">
             {NAV_ITEMS.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="text-xs font-black uppercase tracking-[0.22em] text-white/52 transition hover:text-white"
+                className="shrink-0 text-[10px] font-black uppercase tracking-[0.2em] text-white/52 transition hover:text-white sm:text-xs sm:tracking-[0.22em]"
               >
                 {item.label}
               </a>
@@ -638,7 +640,7 @@ function CommandNav({ walletAddress, counts }) {
             <div className="hidden border-l border-white/14 pl-5 text-[10px] uppercase tracking-[0.22em] text-white/46 sm:block">
               Live Ops <span className="text-white">{liveCount}</span>
             </div>
-            <WalletMultiButton className="!h-11 !rounded-none !border !border-white !bg-white !px-5 !font-black !uppercase !tracking-[0.14em] !text-black hover:!bg-black hover:!text-white" />
+            <WalletMultiButton className="!h-11 !w-full !rounded-none !border !border-white !bg-white !px-4 !text-[10px] !font-black !uppercase !tracking-[0.12em] !text-black hover:!bg-black hover:!text-white sm:!w-auto sm:!px-5 sm:!text-xs sm:!tracking-[0.14em]" />
           </div>
 
           <div className="text-[10px] uppercase tracking-[0.22em] text-white/38 lg:hidden">
@@ -652,7 +654,7 @@ function CommandNav({ walletAddress, counts }) {
 
 function HeroMetric({ label, value }) {
   return (
-    <div className="border-b border-white/14 p-4 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+    <div className="border-b border-white/14 p-3 last:border-b-0 sm:p-4 md:border-b-0 md:border-r md:last:border-r-0">
       <div className="text-[10px] uppercase tracking-[0.24em] text-white/42">{label}</div>
       <div className="mt-2 font-black text-white">{value}</div>
     </div>
@@ -670,15 +672,15 @@ function SignalBoard() {
 
   return (
     <div className="border border-white/16">
-      <div className="grid grid-cols-[32px_repeat(5,minmax(0,1fr))] border-b border-white/12 text-center text-[10px] uppercase tracking-[0.18em] text-white/36">
+      <div className="grid grid-cols-[28px_repeat(5,minmax(0,1fr))] border-b border-white/12 text-center text-[9px] uppercase tracking-[0.16em] text-white/36 sm:grid-cols-[32px_repeat(5,minmax(0,1fr))] sm:text-[10px] sm:tracking-[0.18em]">
         <div />
         {Array.from({ length: 5 }).map((_, col) => (
           <div key={col} className="border-l border-white/12 py-2">{col + 1}</div>
         ))}
       </div>
       {Array.from({ length: 5 }).map((_, row) => (
-        <div key={row} className="grid grid-cols-[32px_repeat(5,minmax(0,1fr))] border-b border-white/12 last:border-b-0">
-          <div className="grid place-items-center border-r border-white/12 text-[10px] font-black uppercase tracking-[0.18em] text-white/36">
+        <div key={row} className="grid grid-cols-[28px_repeat(5,minmax(0,1fr))] border-b border-white/12 last:border-b-0 sm:grid-cols-[32px_repeat(5,minmax(0,1fr))]">
+          <div className="grid place-items-center border-r border-white/12 text-[9px] font-black uppercase tracking-[0.16em] text-white/36 sm:text-[10px] sm:tracking-[0.18em]">
             {String.fromCharCode(65 + row)}
           </div>
           {Array.from({ length: 5 }).map((__, col) => {
@@ -689,7 +691,7 @@ function SignalBoard() {
               <div
                 key={cell}
                 className={[
-                  'grid aspect-square min-h-12 place-items-center border-r border-white/12 text-xs font-black last:border-r-0',
+                  'grid aspect-square min-h-10 place-items-center border-r border-white/12 text-[10px] font-black last:border-r-0 sm:min-h-12 sm:text-xs',
                   marker === 'S' ? 'bg-white text-black' : marker ? 'bg-white/14 text-white' : 'text-white/20',
                 ].join(' ')}
               >

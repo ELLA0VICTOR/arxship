@@ -23,7 +23,7 @@ function DialogContent({ className, children, ...props }) {
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          'retro fixed left-1/2 top-1/2 z-50 w-[min(92vw,720px)] -translate-x-1/2 -translate-y-1/2 border-2 border-white bg-black p-6 shadow-pixel',
+          'retro fixed left-1/2 top-1/2 z-50 max-h-[88svh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border-2 border-white bg-black p-4 shadow-pixel sm:w-[min(92vw,720px)] sm:p-6',
           className
         )}
         {...props}
@@ -45,7 +45,7 @@ function DialogHeader({ className, ...props }) {
 function DialogTitle({ className, ...props }) {
   return (
     <DialogPrimitive.Title
-      className={cn('font-pixel text-sm uppercase tracking-[0.14em] text-white', className)}
+      className={cn('font-pixel text-xs uppercase leading-6 tracking-[0.12em] text-white sm:text-sm sm:tracking-[0.14em]', className)}
       {...props}
     />
   )

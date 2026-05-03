@@ -31,12 +31,15 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
     font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
     background: #000;
+    overflow-x: hidden;
+    text-rendering: geometricPrecision;
   }
 
   button,

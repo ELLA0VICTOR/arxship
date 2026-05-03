@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-scripts/
+target/
+.anchor/
+.env
+.env.local
+api/.env
+api/node_modules/
+api/dist/
+recovered-buffer.json
+*.log

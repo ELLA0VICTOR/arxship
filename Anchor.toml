@@ -1,0 +1,34 @@
+[toolchain]
+anchor_version = "0.32.1"
+solana_version = "3.1.8"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+arxship = "8LCtkMQAaFKDJ7aVRWaiuKdxgTZ5qEA5psdggvvdbvtS"
+
+[programs.localnet]
+arxship = "11111111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn node --loader ts-node/esm ./node_modules/mocha/bin/mocha -t 1000000 \"tests/**/*.ts\""
+
+[test]
+startup_wait = 600000
+shutdown_wait = 10000
+upgradeable = false
+
+[test.validator]
+bind_address = "127.0.0.1"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
+warp_slot = 200

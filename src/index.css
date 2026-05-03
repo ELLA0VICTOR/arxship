@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Press+Start+2P&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 3%;
+    --card-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 6%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 9%;
+    --muted-foreground: 0 0% 72%;
+    --accent: 0 0% 100%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 0% 100%;
+    --destructive-foreground: 0 0% 0%;
+    --border: 0 0% 100%;
+    --input: 0 0% 10%;
+    --ring: 0 0% 100%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+    background: #000;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .pixel-panel {
+    @apply border-2 border-white/30 bg-black/90 shadow-pixel;
+    image-rendering: pixelated;
+  }
+
+  .pixel-button {
+    @apply inline-flex items-center justify-center border-2 border-white bg-white px-4 py-3 text-sm font-black uppercase tracking-[0.18em] text-black shadow-pixel transition;
+  }
+
+  .pixel-button:hover {
+    @apply -translate-y-0.5 bg-black text-white;
+  }
+
+  .pixel-button:disabled {
+    @apply translate-y-0 cursor-not-allowed border-white/15 bg-white/5 text-white/30 shadow-none;
+  }
+
+  .pixel-button-secondary {
+    @apply border-white/30 bg-black text-white;
+  }
+
+  .grid-cell {
+    @apply relative aspect-square border border-white/20 bg-black/80 text-xs font-bold text-white transition;
+  }
+
+  .grid-cell::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 62%);
+  }
+
+  .grid-cell:hover::after {
+    @apply opacity-100;
+  }
+}
+
+.radar-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, rgba(255, 255, 255, 0.32), transparent 18%, transparent);
+  animation: sweep 4s linear infinite;
+  opacity: 0.45;
+}
+
+.scanlines {
+  background-size: 100% 4px;
+}

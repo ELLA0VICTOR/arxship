@@ -1,0 +1,20 @@
+[arcium]
+cluster_offset = 456
+rpc_url = "https://api.devnet.solana.com"
+keypair_path = "~/.config/solana/id.json"
+recovery_set_size = 4
+
+[encrypted_ixs]
+path = "encrypted-ixs"
+
+[program]
+name = "arxship"
+path = "programs/arxship"
+
+[localnet]
+nodes = 2
+localnet_timeout_secs = 600
+backends = ["Cerberus"]
+
+[clusters.devnet]
+offset = 456

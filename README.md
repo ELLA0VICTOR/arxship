@@ -23,17 +23,31 @@ Address LUT: 4FuNLXWgjKV7TWdJYLV33ZiZugeezhHmkwzWNyG3W7Nu
 IDL Account: JwYZZKLTesq3orcfQJX2zVrJEx3MjSKXmKQNpTVS785
 ```
 
-## Repo Layout
+## Project Repo Structure
 
 ```txt
-programs/arxship/       Anchor Solana program
-encrypted-ixs/          Arcis encrypted instructions
-api/                    Node API for MXE pubkey, encryption, and Arcium account derivation
-src/                    Vite React frontend
-public/idl/arxship.json Generated Anchor IDL used by the frontend
-build/*.arcis           Generated circuit files to upload for offchain comp defs
-scripts/                Comp-def initialization helpers
+arxship/
+|- programs/arxship/        Anchor Solana program for match state and game rules
+|- encrypted-ixs/           Arcis circuits for private fleet setup and shot checks
+|- api/                     Express API for MXE pubkeys, encryption, and account helpers
+|- src/                     Vite React frontend
+|  |- components/           Reusable UI components
+|  |- lib/                  Shared utility helpers
+|  |- utils/                Solana and Arcium client helpers
+|  `- App.jsx              Main game interface
+|- public/                  Static frontend assets
+|  `- idl/arxship.json     Anchor IDL consumed by the frontend
+|- scripts/                 Computation definition setup and inspection scripts
+|- artifacts/               Local deployment/reference artifacts
+|- Anchor.toml              Anchor workspace configuration
+|- Arcium.toml              Arcium circuit and deployment configuration
+|- Cargo.toml               Rust workspace configuration
+|- package.json             Frontend scripts and dependencies
+|- .env.example             Frontend environment template
+`- README.md
 ```
+
+Generated folders such as `target/`, `build/`, `dist/`, `dist-scripts/`, and `node_modules/` are intentionally ignored and can be recreated locally.
 
 ## Local Setup
 

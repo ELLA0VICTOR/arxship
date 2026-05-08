@@ -23,22 +23,6 @@ Address LUT: 4FuNLXWgjKV7TWdJYLV33ZiZugeezhHmkwzWNyG3W7Nu
 IDL Account: JwYZZKLTesq3orcfQJX2zVrJEx3MjSKXmKQNpTVS785
 ```
 
-Comp definition offsets:
-
-```txt
-init_match_state: 1200228507
-submit_fleet:    2742476098
-fire_shot:       1177767981
-```
-
-Initialized computation definitions:
-
-```txt
-init_match_state: qAnQPCXoYATaKLgv53sM9a7SG1PvfoFrUV42epQfQ4AvbHeDNEiLtpJS8ivEs8vnFF4mNPchPVJmT5BY1u3XK3x
-submit_fleet:    4n4ojV9uBpsdkMZQfCKcA1p4R74xp6MDbfjSyChism75rLyKtcjNeg5VyoZqzTUkSgxmVTPyBoCo2YkPZCYeJ7cq
-fire_shot:       122dBMvRGd4E9eeAxgvF6SKtMLpmJpt7eCLTvKh1hNW1HGFAywUnDLPByEvLf8iydTABBLBxmxc1p54HmsUKAADh
-```
-
 ## Repo Layout
 
 ```txt

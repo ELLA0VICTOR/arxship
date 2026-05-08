@@ -173,6 +173,6 @@ arcium mxe-info 8LCtkMQAaFKDJ7aVRWaiuKdxgTZ5qEA5psdggvvdbvtS -u devnet
 - Hit/miss is revealed by Arcium.
 - Hidden fleets remain private even after the game ends.
 
-## Notes
+## Interface
 
-The frontend currently uses a black and white 8-bit command interface inspired by 8bitcn/shadcn patterns. The generated 8bitcn registry command had a JavaScript parser issue in this starter, so the UI components are local shadcn-style components under `src/components/ui/8bit`, with the official generated `Progress` component retained and normalized into the same design system.
+The frontend uses a black and white command interface with compact panels, clear turn state, and wallet-first actions. Shared UI components live under `src/components/ui/8bit` so game screens stay consistent across desktop and mobile.

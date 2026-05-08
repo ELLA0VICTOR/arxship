@@ -2,6 +2,7 @@ node_modules/
 dist/
 dist-scripts/
 target/
+build/
 .anchor/
 .env
 .env.local
@@ -9,4 +10,6 @@ api/.env
 api/node_modules/
 api/dist/
 recovered-buffer.json
+src/assets/vite.svg
+src/assets/react.svg
 *.log

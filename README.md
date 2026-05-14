@@ -174,3 +174,12 @@ arcium mxe-info 8LCtkMQAaFKDJ7aVRWaiuKdxgTZ5qEA5psdggvvdbvtS -u devnet
 ## Interface
 
 The frontend uses a black and white command interface with compact panels, clear turn state, and wallet-first actions. Shared UI components live under `src/components/ui/8bit` so game screens stay consistent across desktop and mobile.
+
+The app now has four real product tabs:
+
+- **Dashboard**: landing page, protocol explanation, live match stats, and tactical preview.
+- **Play**: all gameplay actions, including create match, join match, encrypted fleet setup, and shot resolution.
+- **Leaderboard**: ranks wallet addresses by wins using finished onchain matches only.
+- **FAQ**: quick explanation of the game loop, Arcium privacy model, and leaderboard rules.
+
+The leaderboard is not mock data. It is computed from fetched game accounts: when a match is `finished`, the public `winner` field is mapped to the creator or opponent address, then total wins are counted per wallet.

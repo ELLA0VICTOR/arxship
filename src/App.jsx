@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { useWallet } from '@solana/wallet-adapter-react'
 import {
   Anchor,
   Crosshair,
+  HelpCircle,
+  LayoutDashboard,
+  ListChecks,
   RefreshCw,
   Satellite,
   Shield,
   Skull,
   Swords,
+  Trophy,
   Waves,
 } from 'lucide-react'
 import {
@@ -43,17 +47,34 @@ import {
   waitForGameChange,
 } from './utils/programClient'
 
-const TABS = [
-  { id: 'waiting', label: 'Open Seas', match: (game) => ['initializing', 'waitingForOpponent'].includes(game.status) },
-  { id: 'setup', label: 'Fleet Setup', match: (game) => game.status === 'fleetSetup' },
-  { id: 'active', label: 'Battle Live', match: (game) => game.status === 'active' },
-  { id: 'finished', label: 'Aftermath', match: (game) => ['finished', 'cancelled'].includes(game.status) },
+const APP_TABS = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'play', label: 'Play', icon: Swords },
+  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'faq', label: 'FAQ', icon: HelpCircle },
 ]
 
-const NAV_ITEMS = [
-  { href: '#intel', label: 'Intel' },
-  { href: '#matches', label: 'Matches' },
-  { href: '#protocol', label: 'Protocol' },
+const FAQ_ITEMS = [
+  {
+    question: 'What is ArxShip?',
+    answer:
+      'ArxShip is a two-player onchain fleet battle. Players hide three ships on a 5x5 grid, take turns firing shots, and only hit/miss plus final winner becomes public.',
+  },
+  {
+    question: 'Where does Arcium fit in?',
+    answer:
+      'Arcium keeps each fleet encrypted and privately computes whether a shot hits. The Solana program stores public state, while Arcium handles the hidden-information logic.',
+  },
+  {
+    question: 'How do I play a full match?',
+    answer:
+      'Connect a wallet, create a match from Play, have a second wallet join, both players encrypt fleets, then alternate shots until one side has hit all hidden ships.',
+  },
+  {
+    question: 'How is the leaderboard calculated?',
+    answer:
+      'The leaderboard reads finished onchain matches and counts each public winner address. No mock scores are added.',
+  },
 ]
 
 function cellName(cell) {
@@ -134,10 +155,7 @@ function GamePanel({ game, walletAddress, onRefresh }) {
   const [targetCell, setTargetCell] = useState(null)
   const [message, setMessage] = useState('')
   const localFleetKey = walletAddress ? `arxship:fleet:${game.id}:${walletAddress}` : ''
-  const ownFleetMask = useMemo(() => {
-    if (!localFleetKey) return 0n
-    return BigInt(localStorage.getItem(localFleetKey) || 0)
-  }, [localFleetKey, game.p1Ready, game.p2Ready])
+  const ownFleetMask = localFleetKey ? BigInt(localStorage.getItem(localFleetKey) || 0) : 0n
 
   const myReady = playerIndex === 1 ? game.p1Ready : playerIndex === 2 ? game.p2Ready : false
   const isMyTurn = game.status === 'active' && playerIndex === game.currentTurn
@@ -370,11 +388,74 @@ function HeaderMetric({ label, value }) {
   )
 }
 
+function winnerAddressFor(game) {
+  if (game.winner === 1) return game.creator
+  if (game.winner === 2) return game.opponent
+  return null
+}
+
+function buildMatchStats(games) {
+  return games.reduce(
+    (stats, game) => {
+      stats.total += 1
+      if (['initializing', 'waitingForOpponent'].includes(game.status)) stats.open += 1
+      if (game.status === 'fleetSetup') stats.setup += 1
+      if (game.status === 'active') stats.active += 1
+      if (game.status === 'finished') stats.finished += 1
+      if (game.status === 'cancelled') stats.cancelled += 1
+      return stats
+    },
+    { total: 0, open: 0, setup: 0, active: 0, finished: 0, cancelled: 0 }
+  )
+}
+
+function buildLeaderboard(games) {
+  const rows = new Map()
+
+  games.forEach((game) => {
+    const players = [game.creator, game.opponent].filter(Boolean)
+    const winner = game.status === 'finished' ? winnerAddressFor(game) : null
+
+    players.forEach((address) => {
+      const current = rows.get(address) || {
+        address,
+        wins: 0,
+        losses: 0,
+        played: 0,
+        lastWinAt: 0,
+        lastWinCallsign: '',
+      }
+
+      current.played += 1
+      if (winner && winner === address) {
+        current.wins += 1
+        if (game.createdAt > current.lastWinAt) {
+          current.lastWinAt = game.createdAt
+          current.lastWinCallsign = game.callsign || `Match ${game.gameId}`
+        }
+      } else if (winner) {
+        current.losses += 1
+      }
+
+      rows.set(address, current)
+    })
+  })
+
+  return Array.from(rows.values())
+    .filter((row) => row.wins > 0)
+    .sort((a, b) => b.wins - a.wins || b.lastWinAt - a.lastWinAt || a.address.localeCompare(b.address))
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return 'No wins yet'
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(timestamp)
+}
+
 export default function App() {
   const wallet = useWallet()
   const walletAddress = wallet.publicKey?.toBase58()
   const [games, setGames] = useState([])
-  const [activeTab, setActiveTab] = useState('waiting')
+  const [activeView, setActiveView] = useState('dashboard')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -415,9 +496,10 @@ export default function App() {
   useEffect(() => {
     let subscriptionId = null
     let debounceId = null
+    let initialRefreshId = null
     let closed = false
 
-    refreshGames({ silent: false })
+    initialRefreshId = window.setTimeout(() => refreshGames({ silent: false }), 0)
 
     function scheduleSilentRefresh() {
       window.clearTimeout(debounceId)
@@ -445,6 +527,7 @@ export default function App() {
 
     return () => {
       closed = true
+      window.clearTimeout(initialRefreshId)
       window.clearTimeout(debounceId)
       window.clearInterval(fallbackId)
       if (subscriptionId !== null) {
@@ -453,9 +536,8 @@ export default function App() {
     }
   }, [])
 
-  const counts = useMemo(() => {
-    return Object.fromEntries(TABS.map((tab) => [tab.id, games.filter(tab.match).length]))
-  }, [games])
+  const stats = buildMatchStats(games)
+  const leaderboard = buildLeaderboard(games)
 
   async function handleCreate(callsign) {
     if (!wallet.connected) {
@@ -467,7 +549,7 @@ export default function App() {
       setBusy(true)
       await createGame(wallet, callsign)
       await refreshGames()
-      setActiveTab('waiting')
+      setActiveView('play')
     } catch (error) {
       setNotice(error.message)
     } finally {
@@ -475,117 +557,28 @@ export default function App() {
     }
   }
 
-  const activeGames = games.filter(TABS.find((tab) => tab.id === activeTab)?.match || (() => false))
-
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="pointer-events-none fixed inset-0 opacity-[0.06] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:64px_64px]" />
       <div className="relative mx-auto min-h-screen max-w-[1500px] sm:border-x sm:border-white/12">
-        <CommandNav walletAddress={walletAddress} counts={counts} />
+        <CommandNav activeView={activeView} onTabChange={setActiveView} walletAddress={walletAddress} stats={stats} />
 
-        <header id="intel" className="border-b border-white/18">
-          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_460px]">
-            <section className="px-4 py-8 sm:px-5 sm:py-10 md:px-8 lg:py-16">
-              <div className="mb-6 flex flex-wrap gap-2 text-[9px] uppercase tracking-[0.22em] text-white/44 sm:mb-7 sm:gap-3 sm:text-[10px] sm:tracking-[0.28em]">
-                <span>Arcium encrypted gameplay</span>
-                <span className="hidden text-white/20 sm:inline">/</span>
-                <span>Solana devnet</span>
-              </div>
-              <h1 className="max-w-4xl font-pixel text-[1.65rem] leading-[1.45] text-white sm:text-4xl md:text-5xl lg:text-6xl">
-                Private fleet warfare, fully onchain.
-              </h1>
-              <p className="mt-6 max-w-3xl text-sm leading-7 text-white/64 sm:mt-7 sm:text-base sm:leading-8 md:text-lg">
-                ArxShip is a two-player strategy game where fleets stay hidden, shots stay public,
-                and Arcium reveals only the rule-required hit, miss, and winner.
-              </p>
-              <div className="mt-9 grid max-w-4xl border-y border-white/16 md:grid-cols-3">
-                <HeroMetric label="Board" value="5 x 5" />
-                <HeroMetric label="Ships" value="3 Hidden" />
-                <HeroMetric label="Reveal" value="Hit / Miss" />
-              </div>
-            </section>
-
-            <aside className="border-t border-white/18 p-4 sm:p-5 md:p-8 lg:border-l lg:border-t-0">
-              <div className="mb-5 flex items-center justify-between border-b border-white/14 pb-4">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.26em] text-white/42">Tactical Screen</div>
-                  <div className="mt-2 font-pixel text-sm text-white">Sector A-25</div>
-                </div>
-                <div className="h-3 w-3 animate-pulse bg-white" />
-              </div>
-              <SignalBoard />
-              <div className="mt-5 grid grid-cols-2 border border-white/14">
-                <HeaderMetric label="Wallet" value={walletAddress ? shortAddress(walletAddress) : 'Offline'} />
-                <HeaderMetric label="Network" value="Devnet" />
-              </div>
-            </aside>
-          </div>
-        </header>
-
-        <section id="protocol" className="grid border-b border-white/18 md:grid-cols-3">
-          <FeatureLine title="Hidden State" text="Fleet masks remain encrypted in MXE-owned state." />
-          <FeatureLine title="Public Rules" text="Shots, turns, hit/miss, and winners are visible." />
-          <FeatureLine title="No Trust UI" text="Solana enforces turns while Arcium resolves private outcomes." />
-        </section>
-
-        <section id="matches" className="px-4 py-7 sm:px-5 md:px-8">
-          <div className="flex flex-col gap-5 border-b border-white/18 pb-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-[0.3em] text-white/42">Battle Board</div>
-              <h2 className="mt-3 font-pixel text-base leading-7 text-white sm:text-xl">Live Match Control</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
-                Create, join, lock fleets, and resolve shots from a single professional command surface.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:flex sm:flex-wrap">
-              {syncing && !loading && (
-                <div className="flex items-center border border-white/14 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/44">
-                  Syncing chain
-                </div>
-              )}
-              <Button variant="secondary" onClick={() => refreshGames({ silent: false })} disabled={loading}>
-                {loading ? <Spinner /> : <RefreshCw className="h-4 w-4" />} Refresh
-              </Button>
-              <CreateGameDialog onCreate={handleCreate} busy={busy} />
-            </div>
-          </div>
-
-          {notice && <div className="mt-6 border-l-2 border-white bg-white/8 p-4 text-sm leading-6 text-white">{notice}</div>}
-
-          <div className="-mx-4 mt-7 overflow-x-auto px-4 sm:-mx-5 sm:px-5 md:mx-0 md:px-0">
-            <nav className="flex min-w-max border-b border-white/18 md:min-w-0 md:flex-wrap">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={[
-                    'shrink-0 border-b-2 px-0 py-4 pr-7 text-left text-[10px] font-black uppercase tracking-[0.18em] transition sm:text-xs sm:tracking-[0.2em] md:pr-12',
-                    activeTab === tab.id ? 'border-white text-white' : 'border-transparent text-white/38 hover:text-white/78',
-                  ].join(' ')}
-                >
-                  {tab.label} <span className="ml-2 text-white/38">{counts[tab.id] || 0}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <section className="min-h-[360px]">
-            {loading && !games.length ? (
-              <div className="flex items-center gap-3 border-b border-white/18 py-10 text-white/70">
-                <Spinner /> Loading encrypted waters...
-              </div>
-            ) : activeGames.length ? (
-              activeGames.map((game) => (
-                <GamePanel key={game.id} game={game} walletAddress={walletAddress} onRefresh={refreshGames} />
-              ))
-            ) : (
-              <div className="border-b border-white/18 py-16 text-center text-sm uppercase tracking-[0.2em] text-white/42">
-                No matches in this sector yet.
-              </div>
-            )}
-          </section>
-        </section>
+        {activeView === 'dashboard' && <DashboardPage walletAddress={walletAddress} stats={stats} onPlay={() => setActiveView('play')} />}
+        {activeView === 'play' && (
+          <PlayPage
+            busy={busy}
+            games={games}
+            loading={loading}
+            notice={notice}
+            onCreate={handleCreate}
+            onRefresh={refreshGames}
+            stats={stats}
+            syncing={syncing}
+            walletAddress={walletAddress}
+          />
+        )}
+        {activeView === 'leaderboard' && <LeaderboardPage games={games} leaderboard={leaderboard} loading={loading} />}
+        {activeView === 'faq' && <FaqPage />}
 
         <footer className="border-t border-white/18 px-4 py-7 sm:px-5 md:px-8">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
@@ -607,13 +600,216 @@ export default function App() {
   )
 }
 
-function CommandNav({ walletAddress, counts }) {
-  const liveCount = (counts.setup || 0) + (counts.active || 0)
+function DashboardPage({ walletAddress, stats, onPlay }) {
+  return (
+    <>
+      <header className="border-b border-white/18">
+        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_460px]">
+          <section className="px-4 py-8 sm:px-5 sm:py-10 md:px-8 lg:py-16">
+            <div className="mb-6 flex flex-wrap gap-2 text-[9px] uppercase tracking-[0.22em] text-white/44 sm:mb-7 sm:gap-3 sm:text-[10px] sm:tracking-[0.28em]">
+              <span>Arcium encrypted gameplay</span>
+              <span className="hidden text-white/20 sm:inline">/</span>
+              <span>Solana devnet</span>
+            </div>
+            <h1 className="max-w-4xl font-pixel text-[1.65rem] leading-[1.45] text-white sm:text-4xl md:text-5xl lg:text-6xl">
+              Private fleet warfare, fully onchain.
+            </h1>
+            <p className="mt-6 max-w-3xl text-sm leading-7 text-white/64 sm:mt-7 sm:text-base sm:leading-8 md:text-lg">
+              ArxShip is a two-player strategy game where fleets stay hidden, shots stay public,
+              and Arcium reveals only the rule-required hit, miss, and winner.
+            </p>
+            <div className="mt-9 grid max-w-4xl border-y border-white/16 md:grid-cols-3">
+              <HeroMetric label="Total Matches" value={stats.total.toString()} />
+              <HeroMetric label="Live Battles" value={stats.active.toString()} />
+              <HeroMetric label="Resolved" value={stats.finished.toString()} />
+            </div>
+            <div className="mt-8">
+              <Button size="lg" onClick={onPlay}>
+                <Swords className="h-4 w-4" /> Open Play Console
+              </Button>
+            </div>
+          </section>
+
+          <aside className="border-t border-white/18 p-4 sm:p-5 md:p-8 lg:border-l lg:border-t-0">
+            <div className="mb-5 flex items-center justify-between border-b border-white/14 pb-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.26em] text-white/42">Tactical Screen</div>
+                <div className="mt-2 font-pixel text-sm text-white">Sector A-25</div>
+              </div>
+              <div className="h-3 w-3 animate-pulse bg-white" />
+            </div>
+            <SignalBoard />
+            <div className="mt-5 grid grid-cols-2 border border-white/14">
+              <HeaderMetric label="Wallet" value={walletAddress ? shortAddress(walletAddress) : 'Offline'} />
+              <HeaderMetric label="Network" value="Devnet" />
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <section className="grid border-b border-white/18 md:grid-cols-3">
+        <FeatureLine title="Hidden State" text="Fleet masks remain encrypted in MXE-owned state." />
+        <FeatureLine title="Public Rules" text="Shots, turns, hit/miss, and winners are visible." />
+        <FeatureLine title="No Trust UI" text="Solana enforces turns while Arcium resolves private outcomes." />
+      </section>
+    </>
+  )
+}
+
+function PlayPage({ busy, games, loading, notice, onCreate, onRefresh, stats, syncing, walletAddress }) {
+  return (
+    <section className="px-4 py-7 sm:px-5 md:px-8">
+      <div className="flex flex-col gap-5 border-b border-white/18 pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-[0.3em] text-white/42">Play Console</div>
+          <h2 className="mt-3 font-pixel text-base leading-7 text-white sm:text-xl">Live Match Control</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
+            Create, join, lock fleets, and resolve every shot from this page. The dashboard stays clean; gameplay lives here.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:flex sm:flex-wrap">
+          {syncing && !loading && (
+            <div className="flex items-center border border-white/14 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/44">
+              Syncing chain
+            </div>
+          )}
+          <Button variant="secondary" onClick={() => onRefresh({ silent: false })} disabled={loading}>
+            {loading ? <Spinner /> : <RefreshCw className="h-4 w-4" />} Refresh
+          </Button>
+          <CreateGameDialog onCreate={onCreate} busy={busy} />
+        </div>
+      </div>
+
+      {notice && <div className="mt-6 border-l-2 border-white bg-white/8 p-4 text-sm leading-6 text-white">{notice}</div>}
+
+      <div className="mt-7 grid border-y border-white/14 md:grid-cols-5">
+        <MiniStat label="Open" value={stats.open.toString()} />
+        <MiniStat label="Setup" value={stats.setup.toString()} />
+        <MiniStat label="Live" value={stats.active.toString()} />
+        <MiniStat label="Finished" value={stats.finished.toString()} />
+        <MiniStat label="Cancelled" value={stats.cancelled.toString()} />
+      </div>
+
+      <section className="min-h-[360px]">
+        {loading && !games.length ? (
+          <div className="flex items-center gap-3 border-b border-white/18 py-10 text-white/70">
+            <Spinner /> Loading encrypted waters...
+          </div>
+        ) : games.length ? (
+          games.map((game) => (
+            <GamePanel key={game.id} game={game} walletAddress={walletAddress} onRefresh={onRefresh} />
+          ))
+        ) : (
+          <div className="border-b border-white/18 py-16 text-center">
+            <ListChecks className="mx-auto mb-5 h-8 w-8 text-white/34" />
+            <div className="text-sm uppercase tracking-[0.2em] text-white/42">No matches yet. Create the first fleet battle.</div>
+          </div>
+        )}
+      </section>
+    </section>
+  )
+}
+
+function LeaderboardPage({ games, leaderboard, loading }) {
+  const finishedCount = games.filter((game) => game.status === 'finished').length
+
+  return (
+    <section className="px-4 py-7 sm:px-5 md:px-8">
+      <div className="border-b border-white/18 pb-6">
+        <div className="text-[10px] uppercase tracking-[0.3em] text-white/42">Leaderboard</div>
+        <h2 className="mt-3 font-pixel text-base leading-7 text-white sm:text-xl">Most Wins</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
+          Ranked directly from finished onchain matches. If a match is still live or cancelled, it does not count as a win.
+        </p>
+      </div>
+
+      <div className="mt-7 grid border-y border-white/14 md:grid-cols-3">
+        <MiniStat label="Tracked Players" value={leaderboard.length.toString()} />
+        <MiniStat label="Finished Matches" value={finishedCount.toString()} />
+        <MiniStat label="Total Matches" value={games.length.toString()} />
+      </div>
+
+      {loading && !games.length ? (
+        <div className="flex items-center gap-3 border-b border-white/18 py-10 text-white/70">
+          <Spinner /> Loading leaderboard...
+        </div>
+      ) : leaderboard.length ? (
+        <div className="mt-8 overflow-x-auto border border-white/14">
+          <table className="w-full min-w-[720px] border-collapse text-left">
+            <thead className="border-b border-white/14 text-[10px] uppercase tracking-[0.22em] text-white/42">
+              <tr>
+                <th className="p-4">Rank</th>
+                <th className="p-4">Captain</th>
+                <th className="p-4">Wins</th>
+                <th className="p-4">Played</th>
+                <th className="p-4">Losses</th>
+                <th className="p-4">Last Win</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map((row, index) => (
+                <tr key={row.address} className="border-b border-white/10 last:border-b-0">
+                  <td className="p-4 font-pixel text-xs text-white">#{index + 1}</td>
+                  <td className="p-4">
+                    <div className="font-black text-white">{shortAddress(row.address)}</div>
+                    <div className="mt-1 text-xs text-white/38">{row.address}</div>
+                  </td>
+                  <td className="p-4 font-black text-white">{row.wins}</td>
+                  <td className="p-4 text-white/70">{row.played}</td>
+                  <td className="p-4 text-white/70">{row.losses}</td>
+                  <td className="p-4 text-white/70">
+                    <div>{formatDate(row.lastWinAt)}</div>
+                    <div className="mt-1 text-xs text-white/38">{row.lastWinCallsign}</div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="border-b border-white/18 py-16 text-center text-sm uppercase tracking-[0.2em] text-white/42">
+          No winners yet. Finish a match to populate the leaderboard.
+        </div>
+      )}
+    </section>
+  )
+}
+
+function FaqPage() {
+  return (
+    <section className="px-4 py-7 sm:px-5 md:px-8">
+      <div className="border-b border-white/18 pb-6">
+        <div className="text-[10px] uppercase tracking-[0.3em] text-white/42">FAQ</div>
+        <h2 className="mt-3 font-pixel text-base leading-7 text-white sm:text-xl">How ArxShip Works</h2>
+      </div>
+
+      <div className="mt-7 divide-y divide-white/12 border-y border-white/14">
+        {FAQ_ITEMS.map((item) => (
+          <details key={item.question} className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-sm font-black uppercase tracking-[0.16em] text-white">
+              {item.question}
+              <span className="text-white/40 transition group-open:rotate-45">+</span>
+            </summary>
+            <p className="max-w-4xl pb-6 text-sm leading-7 text-white/58">{item.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CommandNav({ activeView, onTabChange, walletAddress, stats }) {
+  const liveCount = (stats.setup || 0) + (stats.active || 0)
+
+  function handleTabClick(id) {
+    onTabChange(id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   return (
     <nav className="sticky top-0 z-30 border-b border-white/18 bg-black/95 px-4 py-3 backdrop-blur sm:px-5 md:px-8 md:py-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <a href="#intel" className="group flex items-center gap-4">
+        <button type="button" onClick={() => handleTabClick('dashboard')} className="group flex items-center gap-4 text-left">
           <span className="grid h-10 w-10 place-items-center border border-white bg-white font-black text-black transition group-hover:bg-black group-hover:text-white">
             AX
           </span>
@@ -621,19 +817,27 @@ function CommandNav({ walletAddress, counts }) {
             <span className="block font-pixel text-xs text-white sm:text-sm">ArxShip</span>
             <span className="mt-1 block text-[10px] uppercase tracking-[0.24em] text-white/40">Private naval tactics</span>
           </span>
-        </a>
+        </button>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="-mx-4 flex gap-5 overflow-x-auto border-y border-white/12 px-4 py-3 sm:mx-0 sm:flex-wrap sm:gap-6 sm:px-0 lg:border-y-0 lg:py-0">
-            {NAV_ITEMS.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="shrink-0 text-[10px] font-black uppercase tracking-[0.2em] text-white/52 transition hover:text-white sm:text-xs sm:tracking-[0.22em]"
+            {APP_TABS.map((item) => {
+              const Icon = item.icon
+
+              return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleTabClick(item.id)}
+                className={[
+                  'inline-flex shrink-0 items-center gap-2 border-b-2 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition sm:text-xs sm:tracking-[0.22em]',
+                  activeView === item.id ? 'border-white text-white' : 'border-transparent text-white/48 hover:text-white/80',
+                ].join(' ')}
               >
-                {item.label}
-              </a>
-            ))}
+                <Icon className="h-3.5 w-3.5" /> {item.label}
+              </button>
+              )
+            })}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[auto_auto] sm:items-center">
